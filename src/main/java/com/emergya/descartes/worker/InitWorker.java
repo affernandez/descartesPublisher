@@ -10,6 +10,7 @@ import com.emergya.descartes.content.DescartesZipContentProxy;
 import com.emergya.descartes.job.JobValidator;
 import com.emergya.descartes.job.SearchDescartesContents;
 import com.emergya.descartes.job.SearchZipDescartesContents;
+import com.emergya.descartes.utils.FileManager;
 
 /**
  * 
@@ -41,9 +42,13 @@ public class InitWorker extends BaseWorker implements Runnable {
         new Thread(new ValidateWorker(getJob())).start();
         new Thread(new PublishWorker(getJob())).start();
         
-		SearchDescartesContents descartesContents = new SearchDescartesContents(
+//		SearchDescartesContents descartesContents = new SearchDescartesContents(
+//				getJob().getJobConfig().getOriginalContentPath());
+//		doWorkFromFolders(getJob(), descartesContents);
+		
+		SearchZipDescartesContents descartesContents = new SearchZipDescartesContents(
 				getJob().getJobConfig().getOriginalContentPath());
-		doWorkFromFolders(getJob(), descartesContents);
+		doWorkFromZip(getJob(), descartesContents);
 //        if (getJob().getJobConfig().isZipSource()) {
 //
 //            // Control de existencia de carpeta de trabajo
@@ -74,13 +79,45 @@ public class InitWorker extends BaseWorker implements Runnable {
      * @param ZipFilesNames
      * @param job
      */
-    private void doWorkFromFolders(JobValidator job,
-            SearchDescartesContents descartesContents) {
-        ArrayList<DescartesContentProxy> listaContenidos = (ArrayList<DescartesContentProxy>) descartesContents
-                .getDescartesContentProxyListNames();
+//    private void doWorkFromFolders(JobValidator job,
+//            SearchDescartesContents descartesContents) {
+//        ArrayList<DescartesContentProxy> listaContenidos = (ArrayList<DescartesContentProxy>) descartesContents
+//                .getDescartesContentProxyListNames();
+//        try {
+//                for (DescartesContentProxy contentFolder : listaContenidos) {
+//                    job.getContentsToValidate().put(contentFolder);
+//                }
+//            log.info("-->> Número Total de Contenidos: "
+//                    + (listaContenidos.size()));
+//            // Añadimos a la cola la poison pill para consumir el thread cuando
+//            // llegue a ella
+//            job.getContentsToValidate().put(JobValidator.STOP_QUEUE);
+//        } catch (InterruptedException e) {
+//            log.error("Error de Interrupción. " + e, e);
+//            try {
+//            	job.getContentsToValidate().put(JobValidator.STOP_QUEUE);
+//            } catch (InterruptedException e1) {
+//                log.error("Error de Interrupción. " + e, e);
+//            }
+//        }
+//    }
+
+    /**
+     * Método que inicializa la cola de análisis de contenidos
+     * @param ZipFilesNames
+     * @param job
+     */
+    private void doWorkFromZip(JobValidator job,
+            SearchZipDescartesContents zipDescartesContents) {
+        ArrayList<DescartesZipContentProxy> listaContenidos = (ArrayList<DescartesZipContentProxy>) zipDescartesContents
+                .getDescartesZipContentProxyListNames();
         try {
-                for (DescartesContentProxy contentFolder : listaContenidos) {
-                    job.getContentsToValidate().put(contentFolder);
+                for (DescartesZipContentProxy zipFile : listaContenidos) {
+                    File contentFolder = FileManager.extractZipContents(
+                            zipFile, job);
+                    DescartesContentProxy contentProxy = new DescartesContentProxy();
+                    contentProxy.setLocalCopy(contentFolder);
+                    job.getContentsToValidate().put(contentProxy);
                 }
             log.info("-->> Número Total de Contenidos: "
                     + (listaContenidos.size()));
@@ -90,44 +127,10 @@ public class InitWorker extends BaseWorker implements Runnable {
         } catch (InterruptedException e) {
             log.error("Error de Interrupción. " + e, e);
             try {
-            	job.getContentsToValidate().put(JobValidator.STOP_QUEUE);
+            	 job.getContentsToValidate().put(JobValidator.STOP_QUEUE);
             } catch (InterruptedException e1) {
                 log.error("Error de Interrupción. " + e, e);
             }
         }
     }
-
-    /**
-     * Método que inicializa la cola de análisis de contenidos
-     * @param ZipFilesNames
-     * @param job
-     */
-//    private void doWorkFromZip(JobValidator job,
-//            SearchZipDescartesContents zipDescartesContents) {
-//        ArrayList<DescartesZipContentProxy> listaContenidos = (ArrayList<DescartesZipContentProxy>) zipDescartesContents
-//                .getDescartesZipContentProxyListNames();
-//        try {
-//                for (DescartesZipContentProxy zipFile : listaContenidos) {
-//                    File contentFolder = FileManager.extractZipContents(
-//                            zipFile, job);
-//                    DescartesContentProxy contentProxy = new DescartesContentProxy();
-//                    contentProxy.setLocalCopy(contentFolder);
-//                    job.getContentsToConvert().put(contentProxy);
-//                }
-//            log.info("-->> Número Total de Contenidos: "
-//                    + (listaContenidos.size()));
-//            // Añadimos a la cola la poison pill para consumir el thread cuando
-//            // llegue a ella
-//            job.getContentsToAnalyze().put(JobConverter.STOP_QUEUE);
-//            job.getContentsToConvert().put(JobConverter.STOP_QUEUE);
-//        } catch (InterruptedException e) {
-//            log.error("Error de Interrupción. " + e, e);
-//            try {
-//                job.getContentsToAnalyze().put(JobConverter.STOP_QUEUE);
-//                job.getContentsToConvert().put(JobConverter.STOP_QUEUE);
-//            } catch (InterruptedException e1) {
-//                log.error("Error de Interrupción. " + e, e);
-//            }
-//        }
-//    }
 }
